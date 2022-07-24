@@ -1,0 +1,7 @@
+[Unit]
+Description=redirector
+
+[Service]
+ExecStart=/usr/bin/redirector
+User=nginx
+Group=nginx

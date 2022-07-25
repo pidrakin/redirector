@@ -1,0 +1,40 @@
+---
+before:
+  hooks:
+    - go mod tidy
+    - go mod download
+builds:
+  - id: redirector-builds
+    binary: redirector
+    env:
+      - CGO_ENABLED=0
+    dir: redirector
+archives:
+  - id: redirector-archives
+    builds:
+      - redirector-builds
+    replacements:
+      darwin: Darwin
+      linux: Linux
+      386: i386
+      amd64: x86_64
+    name_template: "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+dockers:
+  - ids:
+      - redirector-builds
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - "gcr.io/pidrakin/redirector:latest"
+    dockerfile: Containerfile
+release:
+  mode: replace
+announce:
+  telegram:
+    enabled: true
+    chat_id: -1001510892782
+    message_template: |
+      redirector {{ .Tag }}
+
+      Awesome new redirector version is out.
+      Check it out at {{ .ReleaseURL }}

@@ -22,7 +22,7 @@ func setupSocket(socketPath string) (listener net.Listener, err error) {
 
 	listener, err = net.Listen("unix", socketPath)
 	if err != nil {
-		log.Warn().Err(err).Str("socket", socketPath).Msg("Could not create socket")
+		log.Debug().Err(err).Str("socket", socketPath).Msg("Could not create socket")
 		return nil, err
 	}
 	os.Chmod(socketPath, 0770)

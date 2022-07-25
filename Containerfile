@@ -1,18 +1,19 @@
 FROM alpine
 
-ENV USER=redirector
-ENV BINARY=redirector
+ENV SOCKET_FILE=""
+ENV LISTEN_ADDRESS="0.0.0.0:8000"
 
 RUN adduser \
     --disabled-password \
-    --gecos "${USER}" \
+    --gecos "redirector" \
     --shell "/sbin/nologin" \
     --no-create-home \
-    "${USER}"
+    "redirector"
 
-COPY ${BINARY}/${BINARY} /go/bin/
+COPY redirector /go/bin/
 
-# Use an unprivileged user.
-USER ${USER}:${USER}
+USER redirector
 
-ENTRYPOINT ["/go/bin/${BINARY}"]
+EXPOSE 8000
+
+ENTRYPOINT ["/go/bin/redirector"]

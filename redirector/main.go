@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -60,6 +61,23 @@ func httpListener(listener net.Listener) {
 	}
 }
 
+func checkDomainTXT(domain string, url string) (record string) {
+	clean_url := "redirector"
+	if len(url) > 1 {
+		clean_url = fmt.Sprintf("%s.redirector", strings.Replace(url[1:], "/", "_", -1))
+	}
+	txtDomain := fmt.Sprintf("%s.%s", clean_url, domain)
+	records, err := net.LookupTXT(txtDomain)
+	if err != nil {
+		log.Warn().Err(err).Msg("DNS Lookup failed")
+	}
+	if len(records) > 0 {
+		log.Debug().Msgf("Found DNS records: %s", records)
+		return records[0]
+	}
+	return ""
+}
+
 func handler(w http.ResponseWriter, r *http.Request) {
 	uri := r.Host + r.URL.Path
 
@@ -70,6 +88,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		if dest, ok := GlobalRedriects[uri]; ok {
 			log.Debug().Msgf("Redirect To: %s", dest)
 			http.Redirect(w, r, dest, http.StatusFound)
+			return
+		}
+		if record := checkDomainTXT(r.Host, r.URL.Path); record != "" {
+			log.Debug().Msgf("Redirect To: %s", record)
+			http.Redirect(w, r, record, http.StatusFound)
 			return
 		}
 	case "POST":
@@ -120,7 +143,8 @@ func main() {
 
 	flag.StringVar(&socketFile, "socket", LookupEnvOrString("SOCKET_FILE", "/run/redirector/socket"), "The TCP Socket to open")
 	flag.StringVar(&address, "address", LookupEnvOrString("LISTEN_ADDRESS", "127.0.0.1:8000"), "The TCP Socket to listen on [e.g: 127.0.0.1:8000]")
-	flag.StringVar(&ApiKey, "apikey", LookupEnvOrString("APIKEY", tokenGenerator()), "The config File to read in")
+	flag.StringVar(&ApiKey, "apikey", LookupEnvOrString("APIKEY", tokenGenerator()), "API Key to update records")
+
 	flag.BoolVar(&debug, "debug", false, "Run in Debug mode")
 	flag.Parse()
 

@@ -34,3 +34,7 @@ announce:
 
       Awesome new redirector version is out.
       Check it out at {{ .ReleaseURL }}
+
+      Or Pull the container:
+
+      docker pull ghcr.io/pidrakin/redirector:latest

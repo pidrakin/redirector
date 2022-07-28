@@ -1,0 +1,8 @@
+version: '3'
+
+services:
+  redirector:
+    image: ghcr.io/pidrakin/redirector
+    restart: always
+    ports:
+      - "8010:8000"

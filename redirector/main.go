@@ -7,8 +7,11 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
+	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"strings"
 
 	"github.com/rs/zerolog"
@@ -17,6 +20,7 @@ import (
 
 var GlobalRedriects map[string]string
 var ApiKey string
+var Hooks []string
 
 func setupSocket(socketPath string) (listener net.Listener, err error) {
 	os.Remove(socketPath)
@@ -102,17 +106,22 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("Auth Failed"))
 			return
 		}
-		body, err := ioutil.ReadAll(r.Body)
+		redirectDestination, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		responseBody := fmt.Sprintf("Redirect from %s to %s created successfully\n", uri, redirectDestination)
+		destinationDomain, _ := url.Parse(string(redirectDestination))
+		err = executeHook(uri, destinationDomain.Hostname())
+		if err != nil {
+			responseBody = fmt.Sprintf("Hook for Redirect from %s to %s Failed: %s\n", uri, redirectDestination, err.Error())
+		}
 
-		GlobalRedriects[uri] = string(body)
+		GlobalRedriects[uri] = string(redirectDestination)
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/text")
-		successMsg := fmt.Sprintf("Redirect from %s to %s created successfully", uri, body)
-		w.Write([]byte(successMsg))
+		w.Write([]byte(responseBody))
 		return
 	}
 	w.WriteHeader(http.StatusNotFound)
@@ -134,16 +143,68 @@ func tokenGenerator() string {
 	return token
 }
 
+func findHooks(path string) (hooks []string) {
+	files, err := os.ReadDir(path)
+	if err != nil {
+		return
+	}
+
+	for _, file := range files {
+		filePath, _ := filepath.Abs(filepath.Join(path, file.Name()))
+		hooks = append(hooks, filePath)
+	}
+	log.Debug().Msgf("Hooks loaded: %v", hooks)
+
+	return
+}
+
+func findHook(hostname string) (found bool, hookName string) {
+	for _, hook := range Hooks {
+		if strings.Contains(hook, "default") {
+			hookName = hook
+		}
+		if strings.Contains(hook, hostname) {
+			hookName = hook
+		}
+	}
+
+	if info, osErr := os.Stat(hookName); !os.IsNotExist(osErr) {
+		if isExecutable(info.Mode()) {
+			return true, hookName
+		}
+	}
+	return false, hookName
+}
+
+func isExecutable(mode os.FileMode) bool {
+	return mode&0111 != 0
+}
+
+func executeHook(uri string, destination string) error {
+	found, hook := findHook(destination)
+	if !found {
+		log.Debug().Msg("No hook found")
+		return nil
+	}
+	log.Debug().Msgf("Executing hook: %s", hook)
+
+	cmd := exec.Command(hook, uri, destination)
+	err := cmd.Run()
+	return err
+}
+
 func main() {
 	var (
 		socketFile string
 		address    string
+		hookspath  string
 		debug      bool
 	)
 
 	flag.StringVar(&socketFile, "socket", LookupEnvOrString("SOCKET_FILE", "/run/redirector/socket"), "The TCP Socket to open")
 	flag.StringVar(&address, "address", LookupEnvOrString("LISTEN_ADDRESS", "127.0.0.1:8000"), "The TCP Socket to listen on [e.g: 127.0.0.1:8000]")
 	flag.StringVar(&ApiKey, "apikey", LookupEnvOrString("APIKEY", tokenGenerator()), "API Key to update records")
+	flag.StringVar(&hookspath, "hooks", LookupEnvOrString("HOOKS_PATH", "hooks"), "Path to hooks to call on update")
 
 	flag.BoolVar(&debug, "debug", false, "Run in Debug mode")
 	flag.Parse()
@@ -158,7 +219,7 @@ func main() {
 	log.Info().Str("API-Key", ApiKey).Msg("API-KEY")
 
 	GlobalRedriects = make(map[string]string)
-
+	Hooks = findHooks(hookspath)
 	listener := getListener(socketFile, address)
 	http.HandleFunc("/", handler)
 	log.Info().Str("listener", listener.Addr().String()).Msg("Started Listening")

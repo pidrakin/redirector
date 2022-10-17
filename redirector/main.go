@@ -42,6 +42,10 @@ func setupSocket(socketPath string) (listener net.Listener, err error) {
 	return listener, err
 }
 
+func IsIPv4(address string) bool {
+	return strings.Count(address, ":") < 2
+}
+
 func getListener(socketPath string, address string) (listener net.Listener) {
 	if socketPath != "" {
 		listener, err := setupSocket(socketPath)
@@ -49,7 +53,11 @@ func getListener(socketPath string, address string) (listener net.Listener) {
 			return listener
 		}
 	}
-	listener, err := net.Listen("tcp", address)
+	network := "tcp"
+	if IsIPv4(address) {
+		network = "tcp4"
+	}
+	listener, err := net.Listen(network, address)
 	if err != nil {
 		log.Fatal().Err(err).Str("address", address).Msg("Could not create socket")
 		return

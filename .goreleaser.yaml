@@ -31,22 +31,22 @@ dockers:
   - ids: [redirector-builds]
     goos: linux
     goarch: amd64
-    image_templates: ["ghcr.io/pidrakin/redirector:{{ .Version }}-amd64"]
+    image_templates: ["ghcr.io/pidrakin/redirector:v{{ .Version }}-amd64"]
     dockerfile: Containerfile
     use: buildx
     build_flag_templates: ["--platform=linux/amd64"]
   - ids: [redirector-builds]
     goos: linux
     goarch: arm64
-    image_templates: ["ghcr.io/pidrakin/redirector:{{ .Version }}-arm64"]
+    image_templates: ["ghcr.io/pidrakin/redirector:v{{ .Version }}-arm64"]
     dockerfile: Containerfile
     use: buildx
     build_flag_templates: ["--platform=linux/arm64"]
 docker_manifests:
-  - name_template: ghcr.io/pidrakin/redirector:{{ .Version }}
+  - name_template: ghcr.io/pidrakin/redirector:v{{ .Version }}
     image_templates:
-      - ghcr.io/pidrakin/redirector:{{ .Version }}-amd64
-      - ghcr.io/pidrakin/redirector:{{ .Version }}-arm64
+      - ghcr.io/pidrakin/redirector:v{{ .Version }}-amd64
+      - ghcr.io/pidrakin/redirector:v{{ .Version }}-arm64
 release:
   mode: replace
 announce:

@@ -61,4 +61,4 @@ announce:
 
       Or Pull the container:
 
-      docker pull ghcr.io/pidrakin/redirector:{{ mdv2escape .Tag }}
+      docker pull {{ mdv2escape "ghcr.io/pidrakin/redirector" }}:{{ mdv2escape .Tag }}

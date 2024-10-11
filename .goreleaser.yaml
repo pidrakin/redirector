@@ -54,11 +54,11 @@ announce:
     enabled: true
     chat_id: -1001510892782
     message_template: |
-      redirector {{ .Tag }}
+      redirector {{ mdv2escape .Tag }}
 
       Awesome new redirector version is out.
-      Check it out at {{ .ReleaseURL }}
+      Check it out at {{ mdv2escape .ReleaseURL }}
 
       Or Pull the container:
 
-      docker pull ghcr.io/pidrakin/redirector:latest
+      docker pull ghcr.io/pidrakin/redirector:{{ mdv2escape .Tag }}

@@ -1,28 +1,52 @@
----
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
+project_name: redirector
 builds:
   - id: redirector-builds
     binary: redirector
-    env:
-      - CGO_ENABLED=0
+    env: [CGO_ENABLED=0]
+    flags: [-trimpath]
+    ldflags: [-s, -w]
     dir: redirector
+upx:
+  - enabled: true
+    ids: [redirector-builds]
+    goos: [linux]
+    compress: best
+    lzma: true
 archives:
   - id: redirector-archives
-    builds:
-      - redirector-builds
-    replacements:
-      darwin: Darwin
-      linux: Linux
-      386: i386
-      amd64: x86_64
-    name_template: "{{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    builds: [redirector-builds]
+    format: binary
+    name_template: >-
+      {{- .Binary }}-
+      {{- .Version }}-
+      {{- .Os }}-
+      {{- if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- with .Arm }}v{{ . }}{{ end }}
+      {{- with .Mips }}-{{ . }}{{ end }}
+      {{- if not (eq .Amd64 "v1") }}{{ .Amd64 }}{{ end }}
 dockers:
-  - ids:
-      - redirector-builds
+  - ids: [redirector-builds]
     goos: linux
     goarch: amd64
-    image_templates:
-      - "ghcr.io/pidrakin/redirector:latest"
+    image_templates: ["ghcr.io/pidrakin/redirector:{{ .Version }}-amd64"]
     dockerfile: Containerfile
+    use: buildx
+    build_flag_templates: ["--platform=linux/amd64"]
+  - ids: [redirector-builds]
+    goos: linux
+    goarch: arm64
+    image_templates: ["ghcr.io/pidrakin/redirector:{{ .Version }}-arm64"]
+    dockerfile: Containerfile
+    use: buildx
+    build_flag_templates: ["--platform=linux/arm64"]
+docker_manifests:
+  - name_template: ghcr.io/pidrakin/redirector:{{ .Version }}
+    image_templates:
+      - ghcr.io/pidrakin/redirector:{{ .Version }}-amd64
+      - ghcr.io/pidrakin/redirector:{{ .Version }}-arm64
 release:
   mode: replace
 announce:

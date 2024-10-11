@@ -56,7 +56,7 @@ announce:
     message_template: |
       redirector {{ mdv2escape .Tag }}
 
-      Awesome new redirector version is out.
+      Awesome new redirector version is out
       Check it out at {{ mdv2escape .ReleaseURL }}
 
       Or Pull the container:

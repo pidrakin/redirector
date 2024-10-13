@@ -5,6 +5,8 @@ builds:
   - id: redirector-builds
     binary: redirector
     env: [CGO_ENABLED=0]
+    goos: [linux]
+    goarch: ["amd64", "arm64"]
     flags: [-trimpath]
     ldflags: [-s, -w]
     dir: redirector
